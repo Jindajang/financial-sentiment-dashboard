@@ -1,0 +1,1008 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://api.twelvedata.com/time_series",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "symbol",
+              "value": "={{ $('Loop Over Items').item.json.ticker }}"
+            },
+            {
+              "name": "interval",
+              "value": "1min"
+            },
+            {
+              "name": "outputsize",
+              "value": "100"
+            },
+            {
+              "name": "apikey",
+              "value": "={{ $env.TWELVEDATA_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "8200bd73-0db3-44f2-9ae0-80006b640624",
+      "name": "HTTP 1m"
+    },
+    {
+      "parameters": {
+        "url": "https://api.twelvedata.com/time_series",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "symbol",
+              "value": "={{ $('Loop Over Items').item.json.ticker }}"
+            },
+            {
+              "name": "interval",
+              "value": "15min"
+            },
+            {
+              "name": "outputsize",
+              "value": "100"
+            },
+            {
+              "name": "apikey",
+              "value": "={{ $env.TWELVEDATA_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        192
+      ],
+      "id": "6849d362-61fa-4c52-9949-c33cfc51d28a",
+      "name": "HTTP 15m"
+    },
+    {
+      "parameters": {
+        "url": "https://api.twelvedata.com/time_series",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "symbol",
+              "value": "={{ $('Loop Over Items').item.json.ticker }}"
+            },
+            {
+              "name": "interval",
+              "value": "1h"
+            },
+            {
+              "name": "outputsize",
+              "value": "100"
+            },
+            {
+              "name": "apikey",
+              "value": "={{ $env.TWELVEDATA_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        384
+      ],
+      "id": "7e73d469-f309-4a5f-834a-f9899b5ab0cd",
+      "name": "HTTP 1h"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        224,
+        176
+      ],
+      "id": "10eaa821-1f24-45c4-b248-d7454c1ea625",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        512,
+        192
+      ],
+      "id": "be4d862c-54d7-4578-8115-cd7e6a2e7692",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1024,
+        368
+      ],
+      "id": "186f1332-31a9-4ca9-a7ef-1a44499b930d",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        368
+      ],
+      "id": "646908be-b000-4f0d-8fd9-e1739656c98a",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert financial sentiment analyst. Your task is to synthesize the provided articles into a single, highly accurate sentiment signal.\n\n### ANALYTICAL PRIORITIES\n1.  **Hierarchy of Evidence:**\n    * **Tier 1 (Highest Weight):** Quantitative data (Revenue, EPS, Margins), Forward Guidance, Official SEC/Company Filings.\n    * **Tier 2 (Medium Weight):** C-Suite quotes, M&A announcements, Product launches.\n    * **Tier 3 (Lowest Weight):** Analyst price target changes, general market commentary, opinion pieces.\n\n2.  **Conflict Resolution:** If articles contradict each other (e.g., \"Record Revenue\" vs \"Analyst Downgrade\"), strictly prioritize **Tier 1** evidence over Tier 3. Do not simply \"average\" them; let the hard data win.\n\n3.  **Forward-Looking Bias:** In fundamental analysis, *future outlook* matters more than past performance. Heavily weight statements regarding upcoming quarters/fiscal years.\n\n### OUTPUT RULES\n-   **Score Calibration:**\n    * `0.8 to 1.0`: Game-changing positive news (e.g., massive earnings beat + raised guidance).\n    * `0.3 to 0.7`: Generally positive (e.g., good earnings but flat guidance).\n    * `-0.3 to 0.3`: Mixed signals or non-material news.\n    * `-1.0 to -0.8`: Thesis-breaking negative news (e.g., fraud investigation, missed earnings + lowered guidance).\n\n-   **Format:** Output ONLY a raw JSON object. No Markdown blocks. No intro text.\n\n{\n  \"category\": \"Positive\" | \"Neutral\" | \"Negative\",\n  \"score\": <float between -1.0 and 1.0>,\n  \"rationale\": \"<string: One succinct sentence explaining the PRIMARY driver of the score. Focus on the 'Why'.>\"\n}\n\nCRITICAL OUTPUT INSTRUCTIONS:\n1. Output PURE JSON only.\n2. Do NOT use Markdown blocks (no ```json).\n3. Do NOT add any introductory text (no \"Here is the JSON\").\n4. Do NOT add any closing text or rationale outside the JSON.\n5. If you speak a single word that is not part of the JSON object, the system will crash.\n\n\n### INPUT ARTICLES\n{{ JSON.stringify($json.articles) }}",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        448,
+        528
+      ],
+      "id": "83b58d50-fd9b-418f-b0a7-8b4129055256",
+      "name": "AI Agent1",
+      "retryOnFail": true,
+      "maxTries": 5
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "=8167862245",
+        "file": "={{ $('Picture URL').item.json.url }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2640,
+        224
+      ],
+      "id": "34fce4fa-47e4-4bfc-885c-879a939dc448",
+      "name": "Send a photo message",
+      "webhookId": "6dbe8c6d-a94f-40b9-9356-363b45a60370",
+      "credentials": {
+        "telegramApi": {
+          "id": "mupeDasMoR9KrYNf",
+          "name": "Telegram 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "=8167862245",
+        "text": "=🚨 **Signal Alert: {{ $('Input \"Watching\" Stocks to Supabase').item.json.ticker }}**\n\n**Action:** {{ $('Information Only Code').item.json.action }}\n**Confidence:** {{ $('Information Only Code').item.json.confidence }}%\n**Price:** ${{ $('Information Only Code').item.json.current_price }}\n\n📉 **Stop Loss:** ${{ $('Information Only Code').item.json.stop_loss }}\n📈 **Target:** ${{ $('Information Only Code').item.json.target_price }}\n\n📝 **Reasoning:**\n{{ $('Information Only Code').item.json.summary }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2880,
+        368
+      ],
+      "id": "dcd75431-911e-4ec1-9f2f-bbc8506c4467",
+      "name": "Send a text message",
+      "webhookId": "7c2fcb53-7f84-422d-92fd-ccb3d584df44",
+      "credentials": {
+        "telegramApi": {
+          "id": "mupeDasMoR9KrYNf",
+          "name": "Telegram 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2432,
+        368
+      ],
+      "id": "e21f7aba-3e64-46b7-8dd9-b5325e4a8970",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -464,
+        304
+      ],
+      "id": "915e0dd8-c359-42be-acb0-6a446623d6a4",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "tableId": "market_log",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "ticker",
+              "fieldValue": "={{ $('Loop Over Items').item.json.ticker }}"
+            },
+            {
+              "fieldId": "price",
+              "fieldValue": "={{ $('HTTP 1m').item.json.values[0].close }}"
+            },
+            {
+              "fieldId": "recommendation",
+              "fieldValue": "={{ $('Information Only Code').item.json.action }}"
+            },
+            {
+              "fieldId": "ai_summary",
+              "fieldValue": "={{ $('Information Only Code').item.json.summary }}"
+            },
+            {
+              "fieldId": "confidence_score",
+              "fieldValue": "={{ $('Information Only Code').item.json.confidence }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2640,
+        368
+      ],
+      "id": "461088c7-16ae-4bfa-a940-b81495cefbd7",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "S9QGNDqWxzUs0wVl",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\n// Loop through all input items\nfor (const item of items) {\n  const data = item.json;\n\n  // --- SAFETY CHECK ---\n  // If the API returned an error (no 'meta' field), skip processing\n  if (!data.meta) {\n    item.json.ai_context = `⚠️ API ERROR: ${data.message || 'Unknown error occurred'}`;\n    continue; // Stop here for this item and move to the next\n  }\n  // --------------------\n\n  // 1. Extract Meta Data for context\n  const symbol = data.meta.symbol;\n  const interval = data.meta.interval;\n  const exchange = data.meta.exchange;\n\n  // 2. Start the text block\n  let llmText = `### Stock Data: ${symbol} (${exchange})\\n`;\n  llmText += `Interval: ${interval} | Timezone: ${data.meta.exchange_timezone}\\n`;\n  llmText += `Format: DateTime | Open | High | Low | Close | Volume\\n`;\n  llmText += `---\\n`;\n\n  // 3. Iterate through values\n  if (data.values && Array.isArray(data.values)) {\n    data.values.forEach(row => {\n      const o = parseFloat(row.open).toFixed(2);\n      const h = parseFloat(row.high).toFixed(2);\n      const l = parseFloat(row.low).toFixed(2);\n      const c = parseFloat(row.close).toFixed(2);\n      const v = parseInt(row.volume);\n\n      llmText += `${row.datetime} | ${o} | ${h} | ${l} | ${c} | ${v}\\n`;\n    });\n  }\n\n  // 4. Output the result\n  item.json.ai_context = llmText;\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        192
+      ],
+      "id": "c15431ae-fea6-4efe-beca-b708df860afb",
+      "name": "All Candlesticks Merged"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over all incoming items\nreturn items.map(item => {\n  // 1. Get the raw string from either 'output' OR 'text' field\n  const rawString = item.json.output || item.json.text;\n\n  if (!rawString) {\n    throw new Error(\"No JSON string found in 'output' or 'text' fields!\");\n  }\n\n  // 2. THE FIX: Extract ONLY the JSON part using Regex\n  // This looks for the first '{' and the last '}' and grabs everything in between.\n  const jsonMatch = rawString.match(/\\{[\\s\\S]*\\}/);\n\n  let parsedData;\n  if (jsonMatch) {\n    try {\n      // Parse only the clean JSON part\n      parsedData = JSON.parse(jsonMatch[0]);\n    } catch (error) {\n      throw new Error(\"Found JSON-like text but failed to parse it. AI might have returned bad format.\");\n    }\n  } else {\n    // If no curly braces found, the AI completely failed\n    throw new Error(\"No JSON object found in the AI response.\");\n  }\n\n  // 3. Return it structured under \"shortTermSentiment\"\n  return {\n    json: {\n      shortTermSentiment: parsedData\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        528
+      ],
+      "id": "a126f884-c306-4fdb-a133-ac28d70c5b50",
+      "name": "Sentiment Score + Rationale"
+    },
+    {
+      "parameters": {
+        "url": "https://newsapi.org/v2/everything",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $('Loop Over Items').item.json.ticker }}"
+            },
+            {
+              "name": "apikey",
+              "value": "={{ $env.NEWSAPI_API_KEY }}"
+            },
+            {
+              "name": "from",
+              "value": "={{ $today.minus({ days: 3 }).format('yyyy-MM-dd') }}"
+            },
+            {
+              "name": "pagesize",
+              "value": "25"
+            },
+            {
+              "name": "sortBy",
+              "value": "relevance"
+            },
+            {
+              "name": "language",
+              "value": "en"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        528
+      ],
+      "id": "0f43e188-4554-48dc-98df-7dbca86f8199",
+      "name": "Article Gathering"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items\nreturn items.map(item => {\n  let outputText = \"\";\n\n  try {\n    // 1. LOCATE THE DATA (Handle the specific nesting from your file)\n    // Your structure: [ { data: [ {data: [intervals]}, {shortTermSentiment} ] } ]\n    const rootData = item.json.data || [];\n    const techDataGroup = rootData.find(d => d.data && Array.isArray(d.data));\n    const sentimentGroup = rootData.find(d => d.shortTermSentiment);\n\n    // 2. PROCESS TECHNICAL DATA (Candles)\n    if (techDataGroup && techDataGroup.data) {\n      techDataGroup.data.forEach(dataset => {\n        const meta = dataset.meta || {};\n        const rows = dataset.values || [];\n\n        // Add Header: \"### NVDA 1min\"\n        outputText += `\\nDATASET: ${meta.symbol || 'UNK'} ${meta.interval || ''}\\n`;\n        outputText += \"Time,Open,High,Low,Close,Vol\\n\";\n\n        // Add Rows (Compressed)\n        rows.forEach(r => {\n          // Simplify timestamp (keep only time HH:mm:ss if it's intraday to save tokens)\n          const timeStr = r.datetime ? r.datetime.split(' ')[1] : r.openTime; \n          \n          // Round prices to 2 decimals\n          const o = parseFloat(r.open).toFixed(2);\n          const h = parseFloat(r.high).toFixed(2);\n          const l = parseFloat(r.low).toFixed(2);\n          const c = parseFloat(r.close).toFixed(2);\n          \n          // Format: 15:30:00,176.33,176.83,175.91,176.23,3757492\n          outputText += `${timeStr},${o},${h},${l},${c},${r.volume}\\n`;\n        });\n      });\n    }\n\n    // 3. PROCESS SENTIMENT\n    if (sentimentGroup && sentimentGroup.shortTermSentiment) {\n      const sent = sentimentGroup.shortTermSentiment;\n      outputText += `\\n### SENTIMENT REPORT\\n`;\n      outputText += `Score: ${sent.score} (${sent.category})\\n`;\n      outputText += `Rationale: ${sent.rationale}\\n`;\n    }\n\n  } catch (error) {\n    outputText += `\\nError processing data: ${error.message}`;\n  }\n\n  // 4. OUTPUT THE CLEAN \"PROMPT-READY\" STRING\n  return {\n    json: {\n      cleanData: outputText\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        512
+      ],
+      "id": "06034be9-ee32-4865-af45-6acf70e06f85",
+      "name": "Candlestick Combined"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over items\nreturn items.map(item => {\n  try {\n    // --- PART 1: DEEP SEARCH (FIND THE DATA) ---\n    const root = item.json.data || item.json;\n    let candleDatasets = [];\n\n    if (Array.isArray(root)) {\n      if (root.some(d => d.meta && d.meta.interval)) {\n        candleDatasets = root;\n      } else {\n        root.forEach(r => {\n            if (r.data && Array.isArray(r.data)) {\n                candleDatasets = candleDatasets.concat(r.data);\n            }\n        });\n      }\n    }\n\n    const hourlyData = candleDatasets.find(d => d.meta && d.meta.interval === \"1h\");\n\n    if (!hourlyData || !hourlyData.values) {\n      return { json: { error: \"No 1h data found.\" } };\n    }\n\n    // --- PART 2: PREPARE DATA ARRAYS ---\n    const candles = hourlyData.values.slice(0, 30).reverse();\n    const labels = candles.map(c => {\n        const time = c.datetime || c.openTime || \"\";\n        return time.includes(' ') ? time.split(' ')[1].slice(0, 5) : time.slice(11, 16);\n    });\n    const prices = candles.map(c => parseFloat(c.close));\n    \n    // Trend Line Calculation\n    const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;\n    const trendLine = Array(prices.length).fill(avgPrice);\n    const ticker = hourlyData.meta.symbol || \"Unknown\";\n\n    // --- PART 3: BUILD THE CHART OBJECT (THE FIX) ---\n    const chartConfig = {\n      chart: {\n        type: \"line\",\n        data: {\n          labels: labels,\n          datasets: [\n            {\n              label: ticker + \" Price\",\n              data: prices,\n              borderColor: \"blue\",\n              borderWidth: 2,\n              fill: false,\n              pointRadius: 0\n            },\n            {\n              label: \"Trend\",\n              data: trendLine,\n              borderColor: \"red\",\n              borderDash: [5, 5],\n              borderWidth: 1,\n              pointRadius: 0,\n              fill: false\n            }\n          ]\n        },\n        options: {\n          title: { display: true, text: ticker + \" - 1 Hour Trend\" },\n          legend: { display: false },\n          scales: { yAxes: [{ ticks: { fontColor: \"black\" } }] }\n        }\n      }\n    };\n\n    return {\n      json: {\n        quickChartPayload: chartConfig \n      }\n    };\n\n  } catch (error) {\n    return { json: { error: \"Script Failed: \" + error.message } };\n  }\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        224
+      ],
+      "id": "23fba400-bdef-4c4e-852e-837eaaf10f04",
+      "name": "Data for Stock Graph"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a professional trading analyst. Analyze the technical stock data provided.\n\nBased on the current price and volatility, calculate a realistic Stop Loss and Target Price.\n\n\n\nOutput strictly raw JSON. No markdown. No conversational text.\n\n\n\nHere is the data:\n\n{{ $json.cleanData }}\n\n\n\nRequired JSON format:\n\n{\n\n  \"ticker\": \"String\",\n\n  \"action\": \"BUY, SELL, or HOLD\",\n\n  \"confidence\": Integer (0-100),\n\n  \"current_price\": Number (The close price from data),\n\n  \"stop_loss\": Number (Calculate a logical stop level),\n\n  \"target_price\": Number (Calculate a logical profit target),\n\n  \"summary\": \"One sentence reason\"\n\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1696,
+        512
+      ],
+      "id": "afb5a87f-e073-463a-aebb-90dc4e249f82",
+      "name": "AI Agent2",
+      "retryOnFail": true,
+      "maxTries": 5
+    },
+    {
+      "parameters": {
+        "jsCode": "// Clean up if the AI adds ```json markers\nconst raw = $input.first().json.output.replace(/```json/g, \"\").replace(/```/g, \"\");\nreturn JSON.parse(raw);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2032,
+        512
+      ],
+      "id": "7bd408da-1925-4514-a2bc-09fc96c11ce2",
+      "name": "Information Only Code"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://quickchart.io/chart/create",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.quickChartPayload }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2048,
+        224
+      ],
+      "id": "6606570a-c985-4dd1-bcc2-d9babcb36a58",
+      "name": "Picture URL"
+    },
+    {
+      "parameters": {
+        "amount": 15
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3088,
+        368
+      ],
+      "id": "b5128db2-8da6-4f6a-94c4-f9254868398c",
+      "name": "Wait",
+      "webhookId": "fb128a76-b4a6-4a4b-900d-1ab52123d2de"
+    },
+    {
+      "parameters": {
+        "model": "open-mistral-nemo",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        1696,
+        688
+      ],
+      "id": "1a34d8e5-f0ce-46d8-b9cc-c8c9b91efda0",
+      "name": "Mistral Cloud Chat Model",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "haHV5fnKyMCt3IsU",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "open-mistral-nemo",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        448,
+        704
+      ],
+      "id": "d7ae48da-a37f-441f-b068-b1d28b5a0c55",
+      "name": "Mistral Cloud Chat Model1",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "haHV5fnKyMCt3IsU",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1328,
+        112
+      ],
+      "id": "ee42e7cd-c2d9-43fd-b421-a55e0c11ea0b",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1328,
+        304
+      ],
+      "id": "e2243ff9-32c7-4a1a-ba03-c0b8745b5c68",
+      "name": "Schedule Trigger1"
+    },
+    {
+      "parameters": {
+        "chatId": "=8167862245",
+        "text": "=🚨 **BOT CRASHED** 🚨\n\n**Node:** {{ $json.execution.lastNodeExecuted }}\n**Error:** {{ $json.execution.error.message }}\n\n[Link to Execution]({{ $json.execution.url }})",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1136,
+        112
+      ],
+      "id": "f3ca3cf3-4d14-4c79-958e-84a0b3b47062",
+      "name": "Error Message",
+      "webhookId": "7c2fcb53-7f84-422d-92fd-ccb3d584df44",
+      "credentials": {
+        "telegramApi": {
+          "id": "mupeDasMoR9KrYNf",
+          "name": "Telegram 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.alphavantage.co/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "function",
+              "value": "NEWS_SENTIMENT"
+            },
+            {
+              "name": "topics",
+              "value": "technology,finance,energy,manufacturing,life_sciences"
+            },
+            {
+              "name": "sort",
+              "value": "latest"
+            },
+            {
+              "name": "limit",
+              "value": "50"
+            },
+            {
+              "name": "apikey",
+              "value": "={{ $env.ALPHAVANTAGE_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1120,
+        304
+      ],
+      "id": "d0eb00a1-ce01-40de-939b-786f2ec53d3e",
+      "name": "Scanning for Stocks Information per Sector"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get the raw news feed\nconst response = $input.first().json;\nconst newsItems = response.feed || [];\nconst potentialTrades = [];\n\n// Biotech Keywords (Keep these for the safety check)\nconst biotechTriggers = ['FDA', 'Approved', 'Approval', 'Phase 3', 'Met Primary Endpoint', 'Acquisition'];\n\nfor (const story of newsItems) {\n  // Skip if no ticker or bad data\n  if (!story.ticker_sentiment || story.ticker_sentiment.length === 0) continue;\n\n  const tickerData = story.ticker_sentiment[0];\n  const sector = story.topics && story.topics.length > 0 ? story.topics[0].topic : \"general\";\n  const sentiment = parseFloat(tickerData.ticker_sentiment_score);\n  const relevance = parseFloat(tickerData.relevance_score); // CRITICAL: We use this now\n  \n  // 2. FILTER: Ignore Low Relevance \"Fluff\"\n  // If the article barely mentions the stock (Relevance < 0.8), ignore it completely.\n  if (relevance < 0.80) continue; \n\n  // 3. DEFINE THRESHOLDS\n  let threshold = 0.35; \n\n  if (sector === \"life_sciences\") {\n    const headline = story.title || \"\";\n    const isExplosive = biotechTriggers.some(trigger => headline.includes(trigger));\n    threshold = isExplosive ? 0.50 : 0.70;\n  }\n\n  // 4. COLLECT (But don't slice yet)\n  if (Math.abs(sentiment) > threshold) {\n    potentialTrades.push({\n      json: {\n        ticker: tickerData.ticker,\n        sector: sector,\n        news_sentiment: sentiment,\n        headline: story.title,\n        // Calculate a \"Quality Score\" to rank them later\n        quality_score: Math.abs(sentiment) * relevance,\n        status: 'WATCHING'\n      }\n    });\n  }\n}\n\n// 5. DEDUPLICATE \nconst uniqueTrades = Array.from(new Set(potentialTrades.map(a => a.json.ticker)))\n    .map(ticker => potentialTrades.find(a => a.json.ticker === ticker));\n\n// 6. SORT BY QUALITY (The Fix)\n// Sort by (Sentiment * Relevance) so we get the most RELEVANT stories, not just the loudest.\nuniqueTrades.sort((a, b) => b.json.quality_score - a.json.quality_score);\n\n// Return top 5 \"High Quality\" ideas\nreturn uniqueTrades.slice(0, 5);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -912,
+        304
+      ],
+      "id": "e5c59d81-08a4-4f75-839d-d22c3f7477ca",
+      "name": "Organising and Filtering for Sentiment"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vkbhasyeysqlyzoblmsv.supabase.co/rest/v1/market_log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates, return=representation"
+            },
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "ticker",
+              "value": "={{ $json.ticker }}"
+            },
+            {
+              "name": "sector",
+              "value": "={{ $json.sector }}"
+            },
+            {
+              "name": "news_sentiment",
+              "value": "={{ $json.news_sentiment }}"
+            },
+            {
+              "name": "headline",
+              "value": "={{ $json.headline }}"
+            },
+            {
+              "name": "status",
+              "value": "WATCHING"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -688,
+        304
+      ],
+      "id": "1aae6739-d704-47ad-8f5f-41a7a2b355fa",
+      "name": "Input \"Watching\" Stocks to Supabase"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HTTP 1m": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP 15m": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HTTP 1h": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "All Candlesticks Merged",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Data for Stock Graph",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Candlestick Combined",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Sentiment Score + Rationale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a photo message": {
+      "main": [
+        []
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a photo message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "HTTP 1m",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP 15m",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP 1h",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Article Gathering",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All Candlesticks Merged": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sentiment Score + Rationale": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Article Gathering": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Candlestick Combined": {
+      "main": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data for Stock Graph": {
+      "main": [
+        [
+          {
+            "node": "Picture URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent2": {
+      "main": [
+        [
+          {
+            "node": "Information Only Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Only Code": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Picture URL": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Error Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Scanning for Stocks Information per Sector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scanning for Stocks Information per Sector": {
+      "main": [
+        [
+          {
+            "node": "Organising and Filtering for Sentiment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Organising and Filtering for Sentiment": {
+      "main": [
+        [
+          {
+            "node": "Input \"Watching\" Stocks to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input \"Watching\" Stocks to Supabase": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "ea1ad3a7-7c9c-4f66-bc9a-17e57e438526",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2fb7599728f366c8322c85385aae9ab724ae984af8c6ad419be594e7a495a3ad"
+  },
+  "id": "IHm-IwDE0Jnu5CjoGxzGi",
+  "tags": []
+}
